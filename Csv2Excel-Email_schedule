@@ -1,0 +1,55 @@
+# Prompt the user for the folder where CSV files are located
+$csvFolderPath = Read-Host "Enter the folder path where CSV files are located"
+
+# Prompt the user for the path of the Excel workbook
+$excelFilePath = Read-Host "Enter the path for the Excel workbook to be created"
+
+# Prompt the user for a list of recipient email addresses
+$recipients = Read-Host "Enter a list of recipient email addresses (comma-separated)"
+
+# Create a function to compile CSV files into an Excel workbook
+function Compile-CSVToExcel {
+    param (
+        [string]$csvFolderPath,
+        [string]$excelFilePath
+    )
+    
+    # Get the CSV files created on the same day
+    $today = Get-Date
+    $csvFiles = Get-ChildItem -Path $csvFolderPath -Filter *.csv | Where-Object { $_.CreationTime.Date -eq $today.Date }
+    
+    # Check if there are CSV files to compile
+    if ($csvFiles.Count -eq 0) {
+        Write-Host "No CSV files created today to compile."
+        return
+    }
+    
+    # Import the CSV files into Excel
+    $csvFiles | ForEach-Object {
+        Import-Csv -Path $_.FullName | Export-Excel -Path $excelFilePath -WorksheetName $_.BaseName -Append
+    }
+    
+    Write-Host "CSV files compiled into $excelFilePath"
+}
+
+# Prompt the user for the day and time to schedule the task
+$dayOfWeek = Read-Host "Enter the day of the week to schedule the task (e.g., 'Monday')"
+$scheduledTime = Read-Host "Enter the time to schedule the task (e.g., '14:00')"
+
+# Schedule the compilation to run weekly on the specified day and time
+$trigger = New-ScheduledTaskTrigger -Weekly -At $scheduledTime -DaysOfWeek $dayOfWeek
+
+# Define the scheduled task action to compile CSV files
+$action = New-ScheduledTaskAction -Execute PowerShell.exe -Argument "-NoProfile -ExecutionPolicy Bypass -File 'C:\Path\To\YourScript.ps1'"
+
+# Register the scheduled task
+Register-ScheduledTask -TaskName "CompileCSVToExcel" -Trigger $trigger -Action $action
+
+# Provide feedback to the user
+Write-Host "Scheduled task created to compile CSV files into an Excel workbook weekly."
+
+# Compile CSV files on demand (for testing)
+Compile-CSVToExcel -csvFolderPath $csvFolderPath -excelFilePath $excelFilePath
+
+# Email the compiled Excel workbook to the list of recipients
+Send-MailMessage -From "sender@example.com" -To $recipients -Subject "Weekly CSV Compilation Report" -SmtpServer "smtp.example.com" -Attachments $excelFilePath
