@@ -1,47 +1,47 @@
-# Prompt the user for the command to run
-$commandToRun = Read-Host "Enter the command to run (e.g., 'powershell.exe', 'your_script.ps1')"
-
-# Prompt the user for operations or file-path
-$filePath = Read-Host "Enter the Operation (eg. '192.168.1.1') or file path (e.g. 'C:\Path\To\File.txt')"
-
-
-# Prompt the user to set schedule settings
+# Prompt the user for the schedule settings
 $scheduleTrigger = Read-Host "Enter a schedule (e.g., 'Once', 'Daily', 'Weekly', etc.)"
 
 # Define the default values for day, date, and time in 24-hour format
 $day = "Monday"
 $date = (Get-Date).ToString("yyyy-MM-dd")
-$time = "01:00"
+$time = "00:00"
 
-# If the user chooses "Once" prompt for the specific date and time
-# If the user chooses "Weekly" prompt for day and time
-# If the user chooses "Daily" prompt for time
+# If the user chooses "Once," prompt for the specific date and time
 if ($scheduleTrigger -eq "Once") {
     $date = Read-Host "Enter the date (e.g., 'yyyy-MM-dd') [default: today]"
     if ($date -eq "") {
         $date = (Get-Date).ToString("yyyy-MM-dd")
     }
 
-    $time = Read-Host "Enter the time (e.g., '01:00') [default: 01:00]"
+    $time = Read-Host "Enter the time (e.g., '01:00') [default: 00:00]"
     if ($time -eq "") {
-        $time = "01:00"
+        $time = "00:00"
     }
 } elseif ($scheduleTrigger -eq "Weekly") {
     $day = Read-Host "Enter the day of the week (e.g., 'Monday', 'Tuesday', etc.)"
     
-    $time = Read-Host "Enter the time (e.g., '01:00') [default: 01:00]"
+    $time = Read-Host "Enter the time (e.g., '01:00') [default: 00:00]"
     if ($time -eq "") {
-        $time = "01:00"
+        $time = "00:00"
     }
 } elseif ($scheduleTrigger -eq "Daily") {
-    $time = Read-Host "Enter the time (e.g., '01:00') [default: 01:00]"
+    $time = Read-Host "Enter the time (e.g., '01:00') [default: 00:00]"
+
     if ($time -eq "") {
-        $time = "01:00"
+        $time = "00:00"
     }
 }
 
+# Prompt the user for the command to run, operation, or file path
+$input = Read-Host "Enter the command to run, operation, or file path"
+
+# Split the input to analyze it
+$inputParts = $input -split " "
+$commandToRun = $inputParts[0]
+$filePathOrOperation = $inputParts[1]
+
 # Define the scheduled task action
-$action = New-ScheduledTaskAction -Execute $commandToRun -Argument $filePath
+$action = New-ScheduledTaskAction -Execute $commandToRun -Argument $filePathOrOperation
 
 # Define the scheduled task trigger based on the user input
 $trigger = New-ScheduledTaskTrigger -AtStartup
@@ -55,9 +55,8 @@ if ($scheduleTrigger -eq "Once") {
     $trigger = New-ScheduledTaskTrigger -Weekly -At $time -DaysOfWeek $day
 }
 
-# Register the scheduled task
-Register-ScheduledTask -TaskName "ScheduledTaskName" -Action $action -Trigger $trigger -User "Username" -Password "Password"
+# Register the scheduled task 
+Register-ScheduledTask -TaskName "ScheduledTaskName" -Action $action -Trigger $trigger
 
-# Provide feedback on task
-Write-Host "Scheduled task created to run '$commandToRun' on '$filePath' $scheduleTrigger at $day, $time."
-
+# Provide feedback to the user
+Write-Host "Scheduled task created to run '$commandToRun' with operation '$filePathOrOperation' $scheduleTrigger at $day, $time."
